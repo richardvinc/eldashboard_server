@@ -98,27 +98,6 @@ function getNewToken(oAuth2Client, callback) {
   });
 }
 
-function listCourses() {
-  return new Promise((resolve, reject) => {
-    const classroom = google.classroom({ version: 'v1', auth: authCLient });
-    classroom.courses.list(
-      {
-        pageSize: 0,
-        teacherId: `me`,
-      },
-      (err, res) => {
-        if (err) reject(err);
-        const courses = res.data.courses;
-        if (courses && courses.length) {
-          resolve(courses);
-        } else {
-          resolve([]);
-        }
-      }
-    );
-  });
-}
-
 function getCourse(course_id) {
   return new Promise((resolve, reject) => {
     const query = `
@@ -128,7 +107,9 @@ function getCourse(course_id) {
       nama_mk,
       kelas,
       ruangan,
-      jadwal,
+      hari,
+      mulai,
+      selesai,
       course_id 
     FROM courses WHERE course_id = ?`;
     con.query(query, [course_id], function (err, result) {
@@ -190,7 +171,19 @@ function getTeachers(course_id) {
 
 function getAllCourses() {
   return new Promise((resolve, reject) => {
-    con.query('SELECT * FROM courses', function (err, result, fields) {
+    const query = `
+      SELECT 
+        prodi,
+        kode_mk,
+        nama_mk,
+        kelas,
+        ruangan,
+        hari,
+        mulai,
+        selesai,
+        course_id 
+      FROM courses`;
+    con.query(query, function (err, result, fields) {
       if (err) reject(err);
       resolve(result);
     });
