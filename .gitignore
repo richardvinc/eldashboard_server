@@ -1,3 +1,3 @@
 node_modules
-public/token.json
-credentials.json
+credentials
+credentials/*
