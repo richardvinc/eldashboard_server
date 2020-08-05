@@ -25,6 +25,11 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const asyncHandler = require('express-async-handler');
 const app = express();
+app.use(function (req, res, next) {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
 
 //mysql
 const mysql = require('mysql');
@@ -223,20 +228,6 @@ app.get('/api', (req, res) => {
 });
 
 app.get(
-  '/api/course/:course_id',
-  verifyToken,
-  asyncHandler(async (req, res, next) => {
-    const course_id = req.params.course_id;
-    const [course, students, teachers] = await Promise.all([getCourse(course_id), getStudents(course_id), getTeachers(course_id)]);
-    res.json({
-      course,
-      teachers,
-      students,
-    });
-  })
-);
-
-app.get(
   '/api/courses',
   verifyToken,
   asyncHandler(async (req, res, next) => {
@@ -246,11 +237,61 @@ app.get(
 );
 
 app.get(
+  '/api/course/:course_id',
+  verifyToken,
+  asyncHandler(async (req, res, next) => {
+    const course_id = req.params.course_id;
+    const result = await getCourse(course_id);
+    res.json(result);
+  })
+);
+
+app.get(
+  '/api/course_complete/:course_id',
+  verifyToken,
+  asyncHandler(async (req, res, next) => {
+    const course_id = req.params.course_id;
+    const [course, students, teachers, courseworks] = await Promise.all([
+      getCourse(course_id),
+      getStudents(course_id),
+      getTeachers(course_id),
+      getClasswork(course_id),
+    ]);
+    res.json({
+      course,
+      teachers,
+      students,
+      courseworks,
+    });
+  })
+);
+
+app.get(
   '/api/coursework/:course_id',
   verifyToken,
   asyncHandler(async (req, res, next) => {
     const course_id = req.params.course_id;
     const result = await getClasswork(course_id);
+    res.json(result);
+  })
+);
+
+app.get(
+  '/api/student/:course_id',
+  verifyToken,
+  asyncHandler(async (req, res, next) => {
+    const course_id = req.params.course_id;
+    const result = await getStudents(course_id);
+    res.json(result);
+  })
+);
+
+app.get(
+  '/api/teacher/:course_id',
+  verifyToken,
+  asyncHandler(async (req, res, next) => {
+    const course_id = req.params.course_id;
+    const result = await getTeachers(course_id);
     res.json(result);
   })
 );
