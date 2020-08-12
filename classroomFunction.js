@@ -76,7 +76,7 @@ const getCoursework = (googleParam, course_id) => {
         courseWorkStates: 'PUBLISHED',
       },
       (err, res) => {
-        if (err) reject(err);
+        if (err || !res) reject(err);
         const courseworks = res.data.courseWork;
         if (courseworks && courseworks.length) {
           resolve(courseworks);

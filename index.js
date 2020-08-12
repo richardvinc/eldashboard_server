@@ -167,17 +167,6 @@ app.get(
 );
 
 app.get(
-  '/api/courses/:day',
-  // verifyToken,
-  asyncHandler(async (req, res, next) => {
-    const day = req.params.day;
-    const googleParam = { google, authCLient };
-    const result = await fn.getCourseworkByDay(con, googleParam, day);
-    res.json(result);
-  })
-);
-
-app.get(
   '/api/course/:course_id',
   verifyToken,
   asyncHandler(async (req, res, next) => {
@@ -215,6 +204,17 @@ app.get(
     const course_id = req.params.course_id;
     const googleParam = { google, authCLient };
     const result = await fn.getCoursework(googleParam, course_id);
+    res.json(result);
+  })
+);
+
+app.get(
+  '/api/courseworkbyday/:day',
+  // verifyToken,
+  asyncHandler(async (req, res, next) => {
+    const day = req.params.day;
+    const googleParam = { google, authCLient };
+    const result = await fn.getCourseworkByDay(con, googleParam, day);
     res.json(result);
   })
 );
