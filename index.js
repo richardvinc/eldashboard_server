@@ -27,7 +27,7 @@ const asyncHandler = require('express-async-handler');
 const app = express();
 app.use(function (req, res, next) {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   next();
 });
 
@@ -43,6 +43,19 @@ const con = mysql.createConnection({
 con.connect(function (err) {
   if (err) throw err;
   console.log('MySQL Connected!');
+});
+
+const admin = require('firebase-admin');
+firebase_app = admin.initializeApp({
+  credential: admin.credential.applicationDefault(),
+  apiKey: 'AIzaSyCJr2S4nkp-s0Q1xs8FocBK0mIw7pNeDbU',
+  authDomain: 'el-dashboard-1596521281930.firebaseapp.com',
+  databaseURL: 'https://el-dashboard-1596521281930.firebaseio.com',
+  projectId: 'el-dashboard-1596521281930',
+  storageBucket: 'el-dashboard-1596521281930.appspot.com',
+  messagingSenderId: '694142963065',
+  appId: '1:694142963065:web:744c64000066d7d3d1b3a8',
+  measurementId: 'G-TKXSDRZLWG',
 });
 
 // Load client secrets from a local file.
@@ -115,16 +128,17 @@ function getCourse(course_id) {
       hari,
       mulai,
       selesai,
-      course_id 
-    FROM courses WHERE course_id = ?`;
+      course_id,
+      link
+    FROM courses WHERE course_id = ? ORDER BY nama_mk ASC`;
     con.query(query, [course_id], function (err, result) {
       if (err) reject(err);
-      resolve(result);
+      resolve(result[0]);
     });
   });
 }
 
-function getStudents(course_id) {
+function getStudent(course_id) {
   return new Promise((resolve, reject) => {
     const classroom = google.classroom({ version: 'v1', auth: authCLient });
     classroom.courses.students.list(
@@ -149,7 +163,7 @@ function getStudents(course_id) {
   });
 }
 
-function getTeachers(course_id) {
+function getTeacher(course_id) {
   return new Promise((resolve, reject) => {
     const classroom = google.classroom({ version: 'v1', auth: authCLient });
     classroom.courses.teachers.list(
@@ -186,8 +200,10 @@ function getAllCourses() {
         hari,
         mulai,
         selesai,
-        course_id 
-      FROM courses`;
+        course_id,
+        teachers_iap,
+        link 
+      FROM courses ORDER BY nama_mk ASC`;
     con.query(query, function (err, result, fields) {
       if (err) reject(err);
       resolve(result);
@@ -195,7 +211,7 @@ function getAllCourses() {
   });
 }
 
-function getClasswork(course_id) {
+function getCoursework(course_id) {
   return new Promise((resolve, reject) => {
     const classroom = google.classroom({ version: 'v1', auth: authCLient });
     classroom.courses.courseWork.list(
@@ -216,9 +232,37 @@ function getClasswork(course_id) {
   });
 }
 
+// verifying the token
 function verifyToken(req, res, next) {
-  // override the verification (for now)
-  next();
+  // next();
+  const bearerHeader = req.headers['authorization'];
+  console.log(bearerHeader);
+  console.log(req.headers);
+  // Check if bearer is undefined
+  if (typeof bearerHeader !== 'undefined') {
+    // Split at the space
+    const bearer = bearerHeader.split(' ');
+    // Get token from array
+    const bearerToken = bearer[1];
+    // Set the token
+    req.token = bearerToken;
+
+    firebase_app
+      .auth()
+      .verifyIdToken(bearerToken)
+      .then(function (decodedToken) {
+        let uid = decodedToken.uid;
+        // console.log(uid);
+        next();
+      })
+      .catch(function (error) {
+        console.log(error);
+        res.status(403);
+      });
+  } else {
+    // Forbidden
+    res.sendStatus(403);
+  }
 }
 
 app.get('/api', (req, res) => {
@@ -253,9 +297,9 @@ app.get(
     const course_id = req.params.course_id;
     const [course, students, teachers, courseworks] = await Promise.all([
       getCourse(course_id),
-      getStudents(course_id),
-      getTeachers(course_id),
-      getClasswork(course_id),
+      getStudent(course_id),
+      getTeacher(course_id),
+      getCoursework(course_id),
     ]);
     res.json({
       course,
@@ -271,7 +315,7 @@ app.get(
   verifyToken,
   asyncHandler(async (req, res, next) => {
     const course_id = req.params.course_id;
-    const result = await getClasswork(course_id);
+    const result = await getCoursework(course_id);
     res.json(result);
   })
 );
@@ -281,7 +325,7 @@ app.get(
   verifyToken,
   asyncHandler(async (req, res, next) => {
     const course_id = req.params.course_id;
-    const result = await getStudents(course_id);
+    const result = await getStudent(course_id);
     res.json(result);
   })
 );
@@ -291,7 +335,7 @@ app.get(
   verifyToken,
   asyncHandler(async (req, res, next) => {
     const course_id = req.params.course_id;
-    const result = await getTeachers(course_id);
+    const result = await getTeacher(course_id);
     res.json(result);
   })
 );
