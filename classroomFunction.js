@@ -99,7 +99,7 @@ const getCourseworkByDay = async (con, googleParam, day = 'Senin') => {
         classroom.courses.courseWork.list(
           {
             courseId: course.course_id,
-            pageSize: 4,
+            pageSize: 5,
             courseWorkStates: 'PUBLISHED',
           },
           (err, res) => {
