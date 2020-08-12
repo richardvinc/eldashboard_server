@@ -138,6 +138,103 @@ function getCourse(course_id) {
   });
 }
 
+function getAllCourses() {
+  return new Promise((resolve, reject) => {
+    const query = `
+      SELECT 
+        prodi,
+        kode_mk,
+        nama_mk,
+        kelas,
+        ruangan,
+        hari,
+        mulai,
+        selesai,
+        course_id,
+        teachers_iap,
+        link 
+      FROM courses ORDER BY nama_mk ASC`;
+    con.query(query, function (err, result, fields) {
+      if (err) reject(err);
+      resolve(result);
+    });
+  });
+}
+
+function getCoursesByDay(day = 'Senin') {
+  return new Promise((resolve, reject) => {
+    const query = `
+    SELECT 
+      prodi,
+      kode_mk,
+      nama_mk,
+      kelas,
+      ruangan,
+      hari,
+      mulai,
+      selesai,
+      course_id,
+      link,
+      teachers_iap
+    FROM courses WHERE hari = ? ORDER BY nama_mk ASC`;
+    con.query(query, [day], function (err, results) {
+      if (err) reject(err);
+      resolve(results);
+    });
+  });
+}
+
+function getCoursework(course_id) {
+  return new Promise((resolve, reject) => {
+    const classroom = google.classroom({ version: 'v1', auth: authCLient });
+    classroom.courses.courseWork.list(
+      {
+        courseId: course_id,
+        pageSize: 0,
+        courseWorkStates: 'PUBLISHED',
+      },
+      (err, res) => {
+        if (err) reject(err);
+        const courseworks = res.data.courseWork;
+        if (courseworks && courseworks.length) {
+          resolve(courseworks);
+        } else {
+          resolve([]);
+        }
+      }
+    );
+  });
+}
+
+async function getCourseworkByDay(day = 'Senin') {
+  const courses = await getCoursesByDay(day);
+  const classroom = google.classroom({ version: 'v1', auth: authCLient });
+
+  return Promise.all(
+    courses.map((course) => {
+      console.log(course.nama_mk);
+      return new Promise((resolve, reject) => {
+        classroom.courses.courseWork.list(
+          {
+            courseId: course.course_id,
+            pageSize: 4,
+            courseWorkStates: 'PUBLISHED',
+          },
+          (err, res) => {
+            if (err) reject(err);
+            const courseworks = res.data.courseWork;
+            if (courseworks && courseworks.length) {
+              resolve(courseworks);
+            } else {
+              return [];
+            }
+          }
+        );
+      });
+    })
+  );
+}
+
 function getStudent(course_id) {
   return new Promise((resolve, reject) => {
     const classroom = google.classroom({ version: 'v1', auth: authCLient });
@@ -188,50 +285,6 @@ function getTeacher(course_id) {
   });
 }
 
-function getAllCourses() {
-  return new Promise((resolve, reject) => {
-    const query = `
-      SELECT 
-        prodi,
-        kode_mk,
-        nama_mk,
-        kelas,
-        ruangan,
-        hari,
-        mulai,
-        selesai,
-        course_id,
-        teachers_iap,
-        link 
-      FROM courses ORDER BY nama_mk ASC`;
-    con.query(query, function (err, result, fields) {
-      if (err) reject(err);
-      resolve(result);
-    });
-  });
-}
-
-function getCoursework(course_id) {
-  return new Promise((resolve, reject) => {
-    const classroom = google.classroom({ version: 'v1', auth: authCLient });
-    classroom.courses.courseWork.list(
-      {
-        courseId: course_id,
-        pageSize: 0,
-      },
-      (err, res) => {
-        if (err) reject(err);
-        const courseworks = res.data.courseWork;
-        if (courseworks && courseworks.length) {
-          resolve(courseworks);
-        } else {
-          resolve([]);
-        }
-      }
-    );
-  });
-}
-
 // verifying the token
 function verifyToken(req, res, next) {
   // next();
@@ -273,9 +326,18 @@ app.get('/api', (req, res) => {
 
 app.get(
   '/api/courses',
-  verifyToken,
+  // verifyToken,
   asyncHandler(async (req, res, next) => {
     const result = await getAllCourses();
+    res.json(result);
+  })
+);
+
+app.get(
+  '/api/courses/:day',
+  // verifyToken,
+  asyncHandler(async (req, res, next) => {
+    const result = await getCourseworkByDay();
     res.json(result);
   })
 );
