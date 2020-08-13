@@ -20,7 +20,7 @@ const getCourse = (con, course_id) => {
   });
 };
 
-const getAllCourses = (con) => {
+const getAllCourses = (con, mysql, teacher = '') => {
   return new Promise((resolve, reject) => {
     const query = `
       SELECT 
@@ -35,7 +35,10 @@ const getAllCourses = (con) => {
         course_id,
         teachers_iap,
         link 
-      FROM courses ORDER BY nama_mk ASC`;
+      FROM courses
+      ${teacher === '' ? '' : 'WHERE teachers_iap LIKE ' + mysql.escape('%' + teacher + '%')}
+      ORDER BY nama_mk ASC`;
+
     con.query(query, function (err, result, fields) {
       if (err) reject(err);
       resolve(result);
@@ -43,23 +46,27 @@ const getAllCourses = (con) => {
   });
 };
 
-const getCoursesByDay = (con, day = 'Senin') => {
+const getCoursesByDay = (con, mysql, day = 'Senin', teacher = '') => {
   return new Promise((resolve, reject) => {
     const query = `
-    SELECT 
-      prodi,
-      kode_mk,
-      nama_mk,
-      kelas,
-      ruangan,
-      hari,
-      mulai,
-      selesai,
-      course_id,
-      link,
-      teachers_iap
-    FROM courses WHERE hari = ? ORDER BY nama_mk ASC`;
-    con.query(query, [day], function (err, results) {
+      SELECT 
+        prodi,
+        kode_mk,
+        nama_mk,
+        kelas,
+        ruangan,
+        hari,
+        mulai,
+        selesai,
+        course_id,
+        teachers_iap,
+        link 
+      FROM courses
+      WHERE hari = ${mysql.escape(day)}
+      ${teacher === '' ? '' : ' AND teachers_iap LIKE ' + mysql.escape('%' + teacher + '%')}
+      ORDER BY nama_mk ASC`;
+
+    con.query(query, function (err, results) {
       if (err) reject(err);
       resolve(results);
     });
@@ -88,8 +95,8 @@ const getCoursework = (googleParam, course_id) => {
   });
 };
 
-const getCourseworkByDay = async (con, googleParam, day = 'Senin') => {
-  const courses = await getCoursesByDay(con, day);
+const getCourseworkByDay = async (con, mysql, googleParam, day = 'Senin', teacher = '') => {
+  const courses = await getCoursesByDay(con, mysql, day, teacher);
   const classroom = googleParam.google.classroom({ version: 'v1', auth: googleParam.authCLient });
 
   return Promise.all(

@@ -49,15 +49,15 @@ con.connect(function (err) {
 
 const admin = require('firebase-admin');
 firebase_app = admin.initializeApp({
-  credential: admin.credential.applicationDefault(),
-  apiKey: 'AIzaSyCJr2S4nkp-s0Q1xs8FocBK0mIw7pNeDbU',
-  authDomain: 'el-dashboard-1596521281930.firebaseapp.com',
+  credential: admin.credential.cert('./credentials/serviceAccount.json'),
+  // apiKey: 'AIzaSyCJr2S4nkp-s0Q1xs8FocBK0mIw7pNeDbU',
+  // authDomain: 'el-dashboard-1596521281930.firebaseapp.com',
   databaseURL: 'https://el-dashboard-1596521281930.firebaseio.com',
-  projectId: 'el-dashboard-1596521281930',
-  storageBucket: 'el-dashboard-1596521281930.appspot.com',
-  messagingSenderId: '694142963065',
-  appId: '1:694142963065:web:744c64000066d7d3d1b3a8',
-  measurementId: 'G-TKXSDRZLWG',
+  // projectId: 'el-dashboard-1596521281930',
+  // storageBucket: 'el-dashboard-1596521281930.appspot.com',
+  // messagingSenderId: '694142963065',
+  // appId: '1:694142963065:web:744c64000066d7d3d1b3a8',
+  // measurementId: 'G-TKXSDRZLWG',
 });
 
 // Load client secrets from a local file.
@@ -137,9 +137,53 @@ function verifyToken(req, res, next) {
       .auth()
       .verifyIdToken(bearerToken)
       .then(function (decodedToken) {
-        let uid = decodedToken.uid;
-        // console.log(uid);
+        // let uid = decodedToken.uid;
         next();
+      })
+      .catch(function (error) {
+        console.log(error);
+        res.status(403);
+      });
+  } else {
+    // Forbidden
+    res.sendStatus(403);
+  }
+}
+
+// verify token and user
+function verifyTokenAndUser(req, res, next) {
+  // next();
+  const bearerHeader = req.headers['authorization'];
+  console.log(bearerHeader);
+  console.log(req.headers);
+  // Check if bearer is undefined
+  if (typeof bearerHeader !== 'undefined') {
+    // Split at the space
+    const bearer = bearerHeader.split(' ');
+    // Get token from array
+    const bearerToken = bearer[1];
+    // Set the token
+    req.token = bearerToken;
+
+    firebase_app
+      .auth()
+      .verifyIdToken(bearerToken)
+      .then(function (decodedToken) {
+        let uid = decodedToken.uid;
+        console.log(uid);
+        firebase_app
+          .auth()
+          .getUser(uid)
+          .then(function (userRecord) {
+            // See the UserRecord reference doc for the contents of userRecord.
+            // console.log('Successfully fetched user data:', userRecord.toJSON());
+            res.locals.userEmail = userRecord.email;
+            next();
+          })
+          .catch(function (error) {
+            console.log('Error fetching user data:', error);
+            res.status(403);
+          });
       })
       .catch(function (error) {
         console.log(error);
@@ -159,9 +203,11 @@ app.get('/api', (req, res) => {
 
 app.get(
   '/api/courses',
-  // verifyToken,
+  verifyTokenAndUser,
   asyncHandler(async (req, res, next) => {
-    const result = await fn.getAllCourses(con);
+    const { userEmail } = res.locals;
+    console.log(userEmail);
+    const result = await fn.getAllCourses(con, mysql, userEmail);
     res.json(result);
   })
 );
@@ -210,11 +256,13 @@ app.get(
 
 app.get(
   '/api/courseworkbyday/:day',
-  // verifyToken,
+  verifyTokenAndUser,
   asyncHandler(async (req, res, next) => {
     const day = req.params.day;
     const googleParam = { google, authCLient };
-    const result = await fn.getCourseworkByDay(con, googleParam, day);
+    const { userEmail } = res.locals;
+    console.log(userEmail);
+    const result = await fn.getCourseworkByDay(con, mysql, googleParam, day, userEmail);
     res.json(result);
   })
 );
