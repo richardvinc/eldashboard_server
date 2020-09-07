@@ -33,13 +33,13 @@ app.use(function (req, res, next) {
   next();
 });
 
-//mysql
+// mysql
 const mysql = require('mysql');
 const con = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: 'T!ke36O4GJh8ebW',
-  database: 'eldashboard',
+  host: 'localhost', // update this
+  user: 'root', // update this
+  password: 'T!ke36O4GJh8ebW', // update this
+  database: 'eldashboard', // update this
 });
 
 con.connect(function (err) {
@@ -50,14 +50,7 @@ con.connect(function (err) {
 const admin = require('firebase-admin');
 firebase_app = admin.initializeApp({
   credential: admin.credential.cert('./credentials/serviceAccount.json'),
-  // apiKey: 'AIzaSyCJr2S4nkp-s0Q1xs8FocBK0mIw7pNeDbU',
-  // authDomain: 'el-dashboard-1596521281930.firebaseapp.com',
   databaseURL: 'https://el-dashboard-1596521281930.firebaseio.com',
-  // projectId: 'el-dashboard-1596521281930',
-  // storageBucket: 'el-dashboard-1596521281930.appspot.com',
-  // messagingSenderId: '694142963065',
-  // appId: '1:694142963065:web:744c64000066d7d3d1b3a8',
-  // measurementId: 'G-TKXSDRZLWG',
 });
 
 // Load client secrets from a local file.
@@ -118,12 +111,9 @@ function getNewToken(oAuth2Client, callback) {
   });
 }
 
-// verifying the token
+// verifying the token -> this is the middleware to verify ALL requests
 function verifyToken(req, res, next) {
-  // next();
   const bearerHeader = req.headers['authorization'];
-  // console.log(bearerHeader);
-  // console.log(req.headers);
   // Check if bearer is undefined
   if (typeof bearerHeader !== 'undefined') {
     // Split at the space
@@ -133,15 +123,17 @@ function verifyToken(req, res, next) {
     // Set the token
     req.token = bearerToken;
 
+    // verify token to firebase
     firebase_app
       .auth()
       .verifyIdToken(bearerToken)
       .then(function (decodedToken) {
-        // let uid = decodedToken.uid;
+        // go to the next middleware
         next();
       })
       .catch(function (error) {
         console.log(error);
+        // if token is not verified, send 403 status
         res.status(403);
       });
   } else {
@@ -151,11 +143,11 @@ function verifyToken(req, res, next) {
 }
 
 // verify token and user
+// kita butuh verifikasi token dan user untuk mengembalikan data/course yang hanya dimiliki user tersebut saja
 function verifyTokenAndUser(req, res, next) {
-  // next();
   const bearerHeader = req.headers['authorization'];
-  // console.log(bearerHeader);
-  // console.log(req.headers);
+  console.log(bearerHeader);
+  console.log(req.headers);
   // Check if bearer is undefined
   if (typeof bearerHeader !== 'undefined') {
     // Split at the space
@@ -169,14 +161,14 @@ function verifyTokenAndUser(req, res, next) {
       .auth()
       .verifyIdToken(bearerToken)
       .then(function (decodedToken) {
+        // uid = user id
         let uid = decodedToken.uid;
-        // console.log(uid);
         firebase_app
           .auth()
           .getUser(uid)
           .then(function (userRecord) {
-            // See the UserRecord reference doc for the contents of userRecord.
-            // console.log('Successfully fetched user data:', userRecord.toJSON());
+            // ambil email si user untuk dioper ke middleware selanjutnya
+            // email -> untuk ambil data course si user tersebut saja
             res.locals.userEmail = userRecord.email;
             next();
           })
@@ -195,12 +187,14 @@ function verifyTokenAndUser(req, res, next) {
   }
 }
 
+// testing the API (localhost:5000/api)
 app.get('/api', (req, res) => {
   res.json({
     message: 'Welcome to the API',
   });
 });
 
+// dapatkan semua course untuk user yang login
 app.get(
   '/api/courses',
   verifyTokenAndUser,
@@ -212,8 +206,10 @@ app.get(
   })
 );
 
+// dapatkan course tertentu berdasarkan course ID (hanya data yang ada di MySQL)
 app.get(
   '/api/course/:course_id',
+  // kita tidak perlu verifikasi user-nya, cukup tokennya saja
   verifyToken,
   asyncHandler(async (req, res, next) => {
     const course_id = req.params.course_id;
@@ -222,6 +218,7 @@ app.get(
   })
 );
 
+// dapatkan informasi course lengkap, termasuk teacher, student, dan coursework (tugas)
 app.get(
   '/api/course_complete/:course_id',
   verifyToken,
@@ -243,6 +240,7 @@ app.get(
   })
 );
 
+// dapatkan coursework untuk course tertentu saja
 app.get(
   '/api/coursework/:course_id',
   verifyToken,
@@ -254,15 +252,17 @@ app.get(
   })
 );
 
+// dapatkan coursework untuk hari tertentu saja
 app.get(
-  '/api/courseworkbyday/:day',
+  '/api/courseworkbyday/:day/:all',
   verifyTokenAndUser,
   asyncHandler(async (req, res, next) => {
     const day = req.params.day;
+    const all = req.params.all;
     const googleParam = { google, authCLient };
     const { userEmail } = res.locals;
     // console.log(userEmail);
-    const result = await fn.getCourseworkByDay(con, mysql, googleParam, day, userEmail);
+    const result = await fn.getCourseworkByDay(con, mysql, googleParam, day, userEmail, all);
     res.json(result);
   })
 );

@@ -20,6 +20,10 @@ const getCourse = (con, course_id) => {
   });
 };
 
+/* karena getAllCourses diperuntukkan untuk mendapatkan course bagi user tertentu, maka kita perlu berikan
+kondisi WHERE teachers_iap LIKE ...
+hal ini untuk menghindari user x mengakses course yang tak ada dia di dalamnya.
+*/
 const getAllCourses = (con, mysql, teacher = '') => {
   return new Promise((resolve, reject) => {
     const query = `
@@ -79,13 +83,18 @@ const getCoursework = (googleParam, course_id) => {
     classroom.courses.courseWork.list(
       {
         courseId: course_id,
+        // pageSize 0 artinya ambil semua coursework untuk course tersebut
         pageSize: 0,
         courseWorkStates: 'PUBLISHED',
       },
       (err, res) => {
-        if (err || !res) reject(err);
+        // jika ada eror ketika mengakses URL (atau hal lain), kembalikan empty array agar tidak menimbulkan eror di front-end. untuk informasi, tampilkan erornya di console
+        if (err) {
+          console.log(`error happened when accessing course ${course.nama_mk} with ID ${course.id}`);
+          resolve([]);
+        }
         if (typeof res === 'undefined') {
-          reject(null);
+          resolve([]);
         } else {
           const courseworks = res.data.courseWork;
           if (courseworks && courseworks.length) {
@@ -99,7 +108,7 @@ const getCoursework = (googleParam, course_id) => {
   });
 };
 
-const getCourseworkByDay = async (con, mysql, googleParam, day = 'Senin', teacher = '') => {
+const getCourseworkByDay = async (con, mysql, googleParam, day = 'Senin', teacher = '', all = false) => {
   const courses = await getCoursesByDay(con, mysql, day, teacher);
   const classroom = googleParam.google.classroom({ version: 'v1', auth: googleParam.authCLient });
 
@@ -110,7 +119,8 @@ const getCourseworkByDay = async (con, mysql, googleParam, day = 'Senin', teache
         classroom.courses.courseWork.list(
           {
             courseId: course.course_id,
-            pageSize: 5,
+            // jika getAll=true, ambil semua tugas (pageSize=0). jika tidak, ambil 5 tugas terakhir saja
+            pageSize: all || all === 'true' ? 0 : 5,
             courseWorkStates: 'PUBLISHED',
           },
           (err, res) => {
@@ -189,6 +199,7 @@ const getTeacher = (googleParam, course_id) => {
   });
 };
 
+// ekspor semua function agar bisa dipanggil oleh index.js
 exports.getCourse = getCourse;
 exports.getAllCourses = getAllCourses;
 exports.getCoursesByDay = getCoursesByDay;
