@@ -47,6 +47,9 @@ con.connect(function (err) {
   console.log('MySQL Connected!');
 });
 
+// sambungkan proyek firebase-nya (untuk verifikasi token, dsb) dengan proyek di richard.vinc@kwikkiangie.ac.id
+// untuk melihat proyek firebase-nya, akses: console.firebase.google.com
+// jika diganti, artinya harus membuat api key baru di https://console.developers.google.com/
 const admin = require('firebase-admin');
 firebase_app = admin.initializeApp({
   credential: admin.credential.cert('./credentials/serviceAccount.json'),
