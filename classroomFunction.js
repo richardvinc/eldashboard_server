@@ -84,11 +84,15 @@ const getCoursework = (googleParam, course_id) => {
       },
       (err, res) => {
         if (err || !res) reject(err);
-        const courseworks = res.data.courseWork;
-        if (courseworks && courseworks.length) {
-          resolve(courseworks);
+        if (typeof res === 'undefined') {
+          reject(null);
         } else {
-          resolve([]);
+          const courseworks = res.data.courseWork;
+          if (courseworks && courseworks.length) {
+            resolve(courseworks);
+          } else {
+            resolve([]);
+          }
         }
       }
     );
@@ -101,7 +105,7 @@ const getCourseworkByDay = async (con, mysql, googleParam, day = 'Senin', teache
 
   return Promise.all(
     courses.map((course) => {
-      console.log(course.nama_mk);
+      // console.log(course.nama_mk);
       return new Promise((resolve, reject) => {
         classroom.courses.courseWork.list(
           {
@@ -110,13 +114,22 @@ const getCourseworkByDay = async (con, mysql, googleParam, day = 'Senin', teache
             courseWorkStates: 'PUBLISHED',
           },
           (err, res) => {
-            if (err) reject(err);
-            const courseworks = res.data.courseWork;
-            if (courseworks && courseworks.length) {
-              console.log('called');
-              resolve({ course, courseworks });
-            } else {
+            if (err) {
+              console.log(`error happened when accessing course ${course.nama_mk} with ID ${course.id}`);
               resolve([]);
+            }
+            // console.log(res);
+            if (typeof res === 'undefined') {
+              console.log(`error happened when accessing course ${course.nama_mk} with ID ${course.id}`);
+              resolve([]);
+            } else {
+              const courseworks = res.data.courseWork;
+              if (courseworks && courseworks.length) {
+                // console.log('called');
+                resolve({ course, courseworks });
+              } else {
+                resolve([]);
+              }
             }
           }
         );
@@ -160,6 +173,7 @@ const getTeacher = (googleParam, course_id) => {
       },
       (err, res) => {
         if (err) reject(err);
+        if (typeof res === 'undefined') reject(null);
         const teachers = res.data.teachers;
         if (teachers && teachers.length) {
           resolve(

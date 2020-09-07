@@ -122,8 +122,8 @@ function getNewToken(oAuth2Client, callback) {
 function verifyToken(req, res, next) {
   // next();
   const bearerHeader = req.headers['authorization'];
-  console.log(bearerHeader);
-  console.log(req.headers);
+  // console.log(bearerHeader);
+  // console.log(req.headers);
   // Check if bearer is undefined
   if (typeof bearerHeader !== 'undefined') {
     // Split at the space
@@ -154,8 +154,8 @@ function verifyToken(req, res, next) {
 function verifyTokenAndUser(req, res, next) {
   // next();
   const bearerHeader = req.headers['authorization'];
-  console.log(bearerHeader);
-  console.log(req.headers);
+  // console.log(bearerHeader);
+  // console.log(req.headers);
   // Check if bearer is undefined
   if (typeof bearerHeader !== 'undefined') {
     // Split at the space
@@ -170,7 +170,7 @@ function verifyTokenAndUser(req, res, next) {
       .verifyIdToken(bearerToken)
       .then(function (decodedToken) {
         let uid = decodedToken.uid;
-        console.log(uid);
+        // console.log(uid);
         firebase_app
           .auth()
           .getUser(uid)
@@ -206,7 +206,7 @@ app.get(
   verifyTokenAndUser,
   asyncHandler(async (req, res, next) => {
     const { userEmail } = res.locals;
-    console.log(userEmail);
+    // console.log(userEmail);
     const result = await fn.getAllCourses(con, mysql, userEmail);
     res.json(result);
   })
@@ -261,7 +261,7 @@ app.get(
     const day = req.params.day;
     const googleParam = { google, authCLient };
     const { userEmail } = res.locals;
-    console.log(userEmail);
+    // console.log(userEmail);
     const result = await fn.getCourseworkByDay(con, mysql, googleParam, day, userEmail);
     res.json(result);
   })
